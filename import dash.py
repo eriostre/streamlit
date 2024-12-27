@@ -93,4 +93,4 @@ def update_graphs(selected_year, selected_flow, selected_category):
 
 # Run the app
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8053)
+    app.run_server(debug=True, port=8054)
