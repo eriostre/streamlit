@@ -1,96 +1,43 @@
-import dash
-from dash import dcc, html
-from dash.dependencies import Input, Output
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 
 # Load the dataset
 df = pd.read_csv('ireland_trade.csv')
 
-# Initialize the Dash app
-app = dash.Dash(__name__)
+# Streamlit app
+st.title("Ireland Trade Dashboard")
 
-# App layout
-app.layout = html.Div([
-    html.H1("Ireland Trade Dashboard", style={'textAlign': 'center'}),
-    
-    # Filters
-    html.Div([
-        html.Label("Select Year:"),
-        dcc.Dropdown(
-            id='year-dropdown',
-            options=[{'label': str(year), 'value': year} for year in df['year'].unique()],
-            value=df['year'].max(),
-            placeholder="Select a year"
-        ),
-        html.Label("Select Trade Flow:"),
-        dcc.Dropdown(
-            id='flow-dropdown',
-            options=[{'label': flow, 'value': flow} for flow in df['flow'].unique()],
-            value='Export',
-            placeholder="Select trade flow"
-        ),
-        html.Label("Select Commodity Category:"),
-        dcc.Dropdown(
-            id='category-dropdown',
-            options=[{'label': cat, 'value': cat} for cat in df['category'].unique()],
-            value=None,
-            placeholder="Select a category (optional)"
-        ),
-    ], style={'width': '30%', 'display': 'inline-block', 'verticalAlign': 'top'}),
-    
-    # Graphs
-    html.Div([
-        dcc.Graph(id='bar-chart'),
-        dcc.Graph(id='line-chart'),
-        dcc.Graph(id='pie-chart'),
-    ], style={'width': '65%', 'display': 'inline-block'}),
-])
+# Filters
+st.sidebar.header("Filters")
+selected_year = st.sidebar.selectbox("Select Year", options=sorted(df['year'].unique()), index=len(df['year'].unique()) - 1)
+selected_flow = st.sidebar.selectbox("Select Trade Flow", options=df['flow'].unique())
+selected_category = st.sidebar.selectbox("Select Commodity Category", options=['All'] + df['category'].unique().tolist())
 
-# Callbacks for interactivity
-@app.callback(
-    [Output('bar-chart', 'figure'),
-     Output('line-chart', 'figure'),
-     Output('pie-chart', 'figure')],
-    [Input('year-dropdown', 'value'),
-     Input('flow-dropdown', 'value'),
-     Input('category-dropdown', 'value')]
+# Filter data based on selections
+filtered_df = df[(df['year'] == selected_year) & (df['flow'] == selected_flow)]
+if selected_category != 'All':
+    filtered_df = filtered_df[filtered_df['category'] == selected_category]
+
+# Display summary statistics
+st.write(f"## Summary for {selected_flow} in {selected_year}")
+st.write(f"Number of Transactions: {filtered_df.shape[0]}")
+st.write(f"Total Trade Value (USD): ${filtered_df['trade_usd'].sum():,.2f}")
+st.write(f"Total Weight (kg): {filtered_df['weight_kg'].sum():,.2f}")
+
+# Visualizations
+st.write("### Top Commodities by Trade Value")
+top_commodities = filtered_df.nlargest(10, 'trade_usd')
+fig_bar = px.bar(top_commodities, x='commodity', y='trade_usd', labels={'trade_usd': 'Trade Value (USD)', 'commodity': 'Commodity'})
+st.plotly_chart(fig_bar)
+
+st.write("### Trade Trends Over Years")
+fig_line = px.line(
+    df[(df['flow'] == selected_flow) & (df['category'] == selected_category)] if selected_category != 'All' else df[df['flow'] == selected_flow],
+    x='year', y='trade_usd', color='commodity', labels={'trade_usd': 'Trade Value (USD)', 'year': 'Year'}
 )
-def update_graphs(selected_year, selected_flow, selected_category):
-    # Filter data based on selections
-    filtered_df = df[(df['year'] == selected_year) & (df['flow'] == selected_flow)]
-    if selected_category:
-        filtered_df = filtered_df[filtered_df['category'] == selected_category]
-    
-    # Bar chart: Top commodities by trade_usd
-    bar_chart = px.bar(
-        filtered_df.nlargest(10, 'trade_usd'),
-        x='commodity',
-        y='trade_usd',
-        title=f"Top 10 Commodities by Trade Value ({selected_flow}, {selected_year})",
-        labels={'trade_usd': 'Trade Value (USD)', 'commodity': 'Commodity'},
-    )
-    
-    # Line chart: Trade trends over years
-    line_chart = px.line(
-        df[(df['flow'] == selected_flow) & (df['category'] == selected_category)] if selected_category else df[df['flow'] == selected_flow],
-        x='year',
-        y='trade_usd',
-        color='commodity',
-        title=f"Trade Trends Over Years ({selected_flow})",
-        labels={'trade_usd': 'Trade Value (USD)', 'year': 'Year'}
-    )
-    
-    # Pie chart: Trade distribution by weight_kg
-    pie_chart = px.pie(
-        filtered_df,
-        names='commodity',
-        values='weight_kg',
-        title=f"Trade Distribution by Weight ({selected_flow}, {selected_year})"
-    )
-    
-    return bar_chart, line_chart, pie_chart
+st.plotly_chart(fig_line)
 
-# Run the app
-if __name__ == '__main__':
-    app.run_server(debug=True, port=8053)
+st.write("### Trade Distribution by Weight")
+fig_pie = px.pie(filtered_df, names='commodity', values='weight_kg', title=f"Trade Distribution by Weight ({selected_year})")
+st.plotly_chart(fig_pie)
