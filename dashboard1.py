@@ -1,6 +1,10 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import dash
+from dash import dcc, html
+from dash.dependencies import Input, Output
+
 
 # Load the dataset
 df = pd.read_csv('ireland_trade.csv')
