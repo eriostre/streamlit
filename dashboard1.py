@@ -1,10 +1,13 @@
-pip install plotly
-import streamlit as st
+import json
 import pandas as pd
-import plotly.express as px
+import plotly.express as px  # (version 4.7.0)
+import plotly.graph_objects as go
+
 import dash
 from dash import dcc, html
 from dash.dependencies import Input, Output
+import pandas as pd
+import plotly.express as px
 
 
 # Load the dataset
