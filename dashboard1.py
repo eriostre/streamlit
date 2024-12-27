@@ -1,7 +1,7 @@
 
 
 # Load the dataset
-df = pd.read_csv('ireland_trade.csv')
+df = pd.read_csv('irish_trade.csv')
 
 # Streamlit app
 st.title("Ireland Trade Dashboard")
